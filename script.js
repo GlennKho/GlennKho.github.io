@@ -36,12 +36,6 @@
       if (scattered) {
         point.x += point.vx * seconds * speedMultiplier;
         point.y += point.vy * seconds * speedMultiplier;
-        const right = width - point.radius;
-        const bottom = height - 48 - point.radius;
-        if (point.x < point.radius || point.x > right) point.vx *= -1;
-        if (point.y < point.radius || point.y > bottom) point.vy *= -1;
-        point.x = Math.max(point.radius, Math.min(right, point.x));
-        point.y = Math.max(point.radius, Math.min(bottom, point.y));
         continue;
       }
       const dx = point.homeX - pointer.x;
@@ -56,6 +50,42 @@
         point.x = targetX;
         point.y = targetY;
       } else moving = true;
+    }
+    if (scattered) {
+      // shortcut: resolve overlaps per frame; use swept collisions if extreme boosts cause tunneling.
+      for (let i = 0; i < points.length; i++) {
+        for (let j = i + 1; j < points.length; j++) {
+          const a = points[i];
+          const b = points[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const radii = a.radius + b.radius;
+          if (dx * dx + dy * dy >= radii * radii) continue;
+          const distance = Math.hypot(dx, dy);
+          const nx = distance ? dx / distance : 1;
+          const ny = distance ? dy / distance : 0;
+          const overlap = (radii - distance) / 2;
+          a.x -= nx * overlap;
+          a.y -= ny * overlap;
+          b.x += nx * overlap;
+          b.y += ny * overlap;
+          const approach = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+          if (approach > 0) {
+            a.vx -= approach * nx;
+            a.vy -= approach * ny;
+            b.vx += approach * nx;
+            b.vy += approach * ny;
+          }
+        }
+      }
+      for (const point of points) {
+        const right = width - point.radius;
+        const bottom = height - point.radius;
+        if (point.x < point.radius && point.vx < 0 || point.x > right && point.vx > 0) point.vx *= -1;
+        if (point.y < point.radius && point.vy < 0 || point.y > bottom && point.vy > 0) point.vy *= -1;
+        point.x = Math.max(point.radius, Math.min(right, point.x));
+        point.y = Math.max(point.radius, Math.min(bottom, point.y));
+      }
     }
     paint();
     if (scattered || moving) frame = requestAnimationFrame(animate);
@@ -125,14 +155,14 @@
   }
 
   function scatter() {
-    if (scattered) speedMultiplier += 0.5;
+    if (scattered) speedMultiplier += 1.5;
     scattered = true;
     returning = false;
     pointer.x = pointer.y = -1000;
     for (const point of points) {
       if (motion.matches) {
-        point.x = width * 0.08 + Math.random() * width * 0.84;
-        point.y = height * 0.08 + Math.random() * height * 0.76;
+        point.x = point.radius + Math.random() * (width - point.radius * 2);
+        point.y = point.radius + Math.random() * (height - point.radius * 2);
       }
     }
     paint();
