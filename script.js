@@ -30,6 +30,7 @@
     frame = 0;
     const seconds = lastTime === null ? 1 / 60 : Math.min((time - lastTime) / 1000, 0.05);
     lastTime = time;
+    speedMultiplier = 1 + (speedMultiplier - 1) * Math.exp(-seconds * 0.7);
     let moving = false;
     for (const point of points) {
       if (scattered) {
