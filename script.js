@@ -12,6 +12,7 @@
   let height = 0;
   let frame = 0;
   let scattered = false;
+  let returning = false;
   let lastTime = null;
 
   function paint() {
@@ -49,10 +50,14 @@
       const targetY = point.homeY + (dy / (distance || 1)) * force;
       point.x += (targetX - point.x) * 0.12;
       point.y += (targetY - point.y) * 0.12;
-      moving ||= Math.abs(targetX - point.x) + Math.abs(targetY - point.y) > 0.1;
+      if (Math.abs(targetX - point.x) + Math.abs(targetY - point.y) <= 0.1) {
+        point.x = targetX;
+        point.y = targetY;
+      } else moving = true;
     }
     paint();
     if (scattered || moving) frame = requestAnimationFrame(animate);
+    else returning = false;
   }
 
   function start() {
@@ -67,6 +72,11 @@
     frame = 0;
     scattered = false;
     pointer.x = pointer.y = -1000;
+    returning = !motion.matches && points.some(point => point.x !== point.homeX || point.y !== point.homeY);
+    if (returning) {
+      start();
+      return;
+    }
     for (const point of points) {
       point.x = point.homeX;
       point.y = point.homeY;
@@ -88,9 +98,13 @@
         const glyphRow = Math.floor((row - 3) / 2);
         const glyphCol = Math.floor((col - 5) / 2);
         const active = glyph[glyphRow]?.[glyphCol] === '1';
+        const homeX = width / 2 + (col - 11) * spacing;
+        const homeY = height / 2 + (row - 10.5) * spacing;
         points.push({
-          homeX: width / 2 + (col - 11) * spacing,
-          homeY: height / 2 + (row - 10.5) * spacing,
+          homeX,
+          homeY,
+          x: homeX,
+          y: homeY,
           radius: spacing * (active ? 0.34 : 0.065),
           color: active ? (glyphCol === 6 ? '#b8c5fa' : '#cff6e2') : '#8296fa',
         });
@@ -102,12 +116,15 @@
 
   function scatter() {
     scattered = true;
+    returning = false;
     pointer.x = pointer.y = -1000;
     for (const point of points) {
-      point.x = width * 0.08 + Math.random() * width * 0.84;
-      point.y = height * 0.08 + Math.random() * height * 0.76;
       const angle = Math.random() * Math.PI * 2;
       const speed = 20 + Math.random() * 35;
+      if (motion.matches) {
+        point.x = width * 0.08 + Math.random() * width * 0.84;
+        point.y = height * 0.08 + Math.random() * height * 0.76;
+      }
       point.vx = Math.cos(angle) * speed;
       point.vy = Math.sin(angle) * speed;
     }
@@ -116,7 +133,7 @@
   }
 
   canvas.addEventListener('pointermove', (event) => {
-    if (scattered || motion.matches || event.pointerType === 'touch') return;
+    if (scattered || returning || motion.matches || event.pointerType === 'touch') return;
     const rect = canvas.getBoundingClientRect();
     // The board is rotated; map the pointer back to the canvas axes.
     const radians = -(window.innerWidth <= 720 ? 1.5 : 2) * Math.PI / 180;
