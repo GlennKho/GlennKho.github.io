@@ -11,6 +11,8 @@
   let width = 0;
   let height = 0;
   let frame = 0;
+  let scattered = false;
+  let lastTime = null;
 
   function paint() {
     context.clearRect(0, 0, width, height);
@@ -22,10 +24,23 @@
     }
   }
 
-  function animate() {
+  function animate(time) {
     frame = 0;
+    const seconds = lastTime === null ? 1 / 60 : Math.min((time - lastTime) / 1000, 0.05);
+    lastTime = time;
     let moving = false;
     for (const point of points) {
+      if (scattered) {
+        point.x += point.vx * seconds;
+        point.y += point.vy * seconds;
+        const right = width - point.radius;
+        const bottom = height - 48 - point.radius;
+        if (point.x < point.radius || point.x > right) point.vx *= -1;
+        if (point.y < point.radius || point.y > bottom) point.vy *= -1;
+        point.x = Math.max(point.radius, Math.min(right, point.x));
+        point.y = Math.max(point.radius, Math.min(bottom, point.y));
+        continue;
+      }
       const dx = point.homeX - pointer.x;
       const dy = point.homeY - pointer.y;
       const distance = Math.hypot(dx, dy);
@@ -37,16 +52,20 @@
       moving ||= Math.abs(targetX - point.x) + Math.abs(targetY - point.y) > 0.1;
     }
     paint();
-    if (moving) frame = requestAnimationFrame(animate);
+    if (scattered || moving) frame = requestAnimationFrame(animate);
   }
 
   function start() {
-    if (!frame) frame = requestAnimationFrame(animate);
+    if (!frame) {
+      lastTime = null;
+      frame = requestAnimationFrame(animate);
+    }
   }
 
   function reset() {
     cancelAnimationFrame(frame);
     frame = 0;
+    scattered = false;
     pointer.x = pointer.y = -1000;
     for (const point of points) {
       point.x = point.homeX;
@@ -77,21 +96,27 @@
         });
       }
     }
-    reset();
+    if (scattered) scatter();
+    else reset();
   }
 
   function scatter() {
+    scattered = true;
     pointer.x = pointer.y = -1000;
     for (const point of points) {
       point.x = width * 0.08 + Math.random() * width * 0.84;
       point.y = height * 0.08 + Math.random() * height * 0.76;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 20 + Math.random() * 35;
+      point.vx = Math.cos(angle) * speed;
+      point.vy = Math.sin(angle) * speed;
     }
-    if (motion.matches) paint();
-    else start();
+    paint();
+    if (!motion.matches) start();
   }
 
   canvas.addEventListener('pointermove', (event) => {
-    if (motion.matches || event.pointerType === 'touch') return;
+    if (scattered || motion.matches || event.pointerType === 'touch') return;
     const rect = canvas.getBoundingClientRect();
     // The board is rotated; map the pointer back to the canvas axes.
     const radians = -(window.innerWidth <= 720 ? 1.5 : 2) * Math.PI / 180;
@@ -108,7 +133,13 @@
   canvas.addEventListener('click', scatter);
   document.getElementById('scatter').addEventListener('click', scatter);
   document.getElementById('reset').addEventListener('click', reset);
-  motion.addEventListener('change', reset);
+  motion.addEventListener('change', () => {
+    cancelAnimationFrame(frame);
+    frame = 0;
+    if (scattered) {
+      if (!motion.matches) start();
+    } else reset();
+  });
   window.addEventListener('resize', resize);
   resize();
   board.classList.add('canvas-ready');
