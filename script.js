@@ -12,6 +12,7 @@
   let height = 0;
   let frame = 0;
   let scattered = false;
+  let speedMultiplier = 1;
   let returning = false;
   let lastTime = null;
 
@@ -32,8 +33,8 @@
     let moving = false;
     for (const point of points) {
       if (scattered) {
-        point.x += point.vx * seconds;
-        point.y += point.vy * seconds;
+        point.x += point.vx * seconds * speedMultiplier;
+        point.y += point.vy * seconds * speedMultiplier;
         const right = width - point.radius;
         const bottom = height - 48 - point.radius;
         if (point.x < point.radius || point.x > right) point.vx *= -1;
@@ -71,6 +72,7 @@
     cancelAnimationFrame(frame);
     frame = 0;
     scattered = false;
+    speedMultiplier = 1;
     pointer.x = pointer.y = -1000;
     returning = !motion.matches && points.some(point => point.x !== point.homeX || point.y !== point.homeY);
     if (returning) {
@@ -100,33 +102,37 @@
         const active = glyph[glyphRow]?.[glyphCol] === '1';
         const homeX = width / 2 + (col - 11) * spacing;
         const homeY = height / 2 + (row - 10.5) * spacing;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 20 + Math.random() * 35;
         points.push({
           homeX,
           homeY,
           x: homeX,
           y: homeY,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
           radius: spacing * (active ? 0.34 : 0.065),
           color: active ? (glyphCol === 6 ? '#b8c5fa' : '#cff6e2') : '#8296fa',
         });
       }
     }
-    if (scattered) scatter();
+    if (scattered) {
+      paint();
+      if (!motion.matches) start();
+    }
     else reset();
   }
 
   function scatter() {
+    if (scattered) speedMultiplier += 0.5;
     scattered = true;
     returning = false;
     pointer.x = pointer.y = -1000;
     for (const point of points) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 20 + Math.random() * 35;
       if (motion.matches) {
         point.x = width * 0.08 + Math.random() * width * 0.84;
         point.y = height * 0.08 + Math.random() * height * 0.76;
       }
-      point.vx = Math.cos(angle) * speed;
-      point.vy = Math.sin(angle) * speed;
     }
     paint();
     if (!motion.matches) start();
@@ -161,5 +167,5 @@
   resize();
   board.classList.add('canvas-ready');
   document.getElementById('play-controls').hidden = false;
-  document.getElementById('play-hint').textContent = 'Move the cursor. Tap to scatter.';
+  document.getElementById('play-hint').textContent = 'Tap to scatter. Keep tapping to speed up.';
 })();
