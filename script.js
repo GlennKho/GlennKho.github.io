@@ -1,4 +1,31 @@
 (() => {
+  const themeToggle = document.getElementById('dark-mode');
+  function setTheme(dark) {
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    themeToggle.checked = dark;
+  }
+  try { setTheme(localStorage.getItem('theme') === 'dark'); }
+  catch { setTheme(false); }
+  themeToggle.addEventListener('change', () => {
+    setTheme(themeToggle.checked);
+    try { localStorage.setItem('theme', themeToggle.checked ? 'dark' : 'light'); }
+    catch { /* Storage can be unavailable in private or restricted browsing. */ }
+  });
+
+  const switcher = document.getElementById('site-switcher');
+  document.addEventListener('click', (event) => {
+    if (!switcher.contains(event.target)) switcher.open = false;
+  });
+  switcher.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && switcher.open) {
+      switcher.open = false;
+      switcher.querySelector('summary').focus();
+    }
+  });
+  switcher.querySelector('.site-links').addEventListener('click', (event) => {
+    if (event.target.closest('a')) switcher.open = false;
+  });
+
   const canvas = document.getElementById('pixels');
   const context = canvas.getContext('2d');
   if (!context) return;
