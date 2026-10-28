@@ -79,7 +79,10 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 .site-links a:hover { background: var(--hover); }
 .site-links small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; font-weight: 400; }
 .theme-toggle { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 12px; margin-top: 6px; border-top: 1px solid var(--line); cursor: pointer; font-size: 13px; font-weight: 600; }
-.theme-toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--blue); cursor: pointer; }
+.theme-toggle input { appearance: none; position: relative; flex-shrink: 0; width: 44px; height: 26px; margin: 0; border: 1px solid var(--muted); border-radius: 999px; background: var(--hover); cursor: pointer; transition: background .18s, border-color .18s; }
+.theme-toggle input::before { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--ink); transition: transform .18s, background .18s; }
+.theme-toggle input:checked { border-color: #2945ed; background: #2945ed; }
+.theme-toggle input:checked::before { transform: translateX(18px); background: var(--mint); }
 .site-header nav { display: flex; gap: 36px; }
 .site-header nav a, .header-github { font-size: 13px; font-weight: 600; padding-block: 12px; }
 .site-header nav a:hover, .header-github:hover { color: var(--blue); }
@@ -216,4 +219,9 @@ h3 { font-family: var(--display); font-size: 25px; font-weight: 500; letter-spac
 @media (prefers-reduced-motion: reduce) {
   :root { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; }
+}
+
+@media (forced-colors: active) {
+  .theme-toggle input { appearance: auto; }
+  .theme-toggle input::before { display: none; }
 }
